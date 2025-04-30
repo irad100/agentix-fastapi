@@ -102,6 +102,27 @@ make [dev|staging|production] # e.g. make dev
 http://localhost:8000/docs
 ```
 
+#### Local Frontend
+
+1. Install dependencies:
+
+```bash
+cd frontend
+npm install
+```
+
+2. Run the application:
+
+```bash
+npm run dev
+```
+
+3. Go to the frontend:
+
+```bash
+http://localhost:4000
+```
+
 #### Using Docker
 
 1. Build and run with Docker Compose:
