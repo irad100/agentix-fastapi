@@ -7,8 +7,8 @@ import api from '@/lib/api';
 // --- Interfaces (Keep User, Remove Token/SessionInfo) ---
 
 interface User {
-    id: number | null;
-    email: string | null;
+  id: number | null;
+  email: string | null;
 }
 
 // --- Context Definition (Remove session state/functions) ---
@@ -35,7 +35,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Removed: Forward declare createNewSessionFn
 
   // Keep fetchUserDetails
-  const fetchUserDetails = useCallback(async (token: string) => {
+  const fetchUserDetails = useCallback(async () => {
     console.log("[AuthContext] Fetching user details...");
     try {
       // Interceptor will add token
@@ -48,63 +48,63 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(null); // Clear user details on error
       return false; // Indicate failure
     }
-  }, []); 
+  }, []);
 
   // Removed: setActiveSession, fetchSessions, createNewSessionFn, renameSession, deleteSession
 
   // Keep logout
   const logout = useCallback(() => {
-      console.log("[AuthContext] Logging out...");
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('authTokenExpiry');
-      // Remove session items handled by SessionContext reacting to userToken being null
-      localStorage.removeItem('activeSessionId'); 
-      localStorage.removeItem('activeSessionInfo');
-      setUserToken(null); // This will trigger SessionContext useEffect
-      setUser(null);
-      // SessionContext will handle clearing its state
-      router.push('/login');
+    console.log("[AuthContext] Logging out...");
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('authTokenExpiry');
+    // Remove session items handled by SessionContext reacting to userToken being null
+    localStorage.removeItem('activeSessionId');
+    localStorage.removeItem('activeSessionInfo');
+    setUserToken(null); // This will trigger SessionContext useEffect
+    setUser(null);
+    // SessionContext will handle clearing its state
+    router.push('/login');
   }, [router]);
 
   // Keep checkAuth, but simplify - only responsible for token and user details
   const checkAuth = useCallback(async () => {
-        console.log("[AuthContext] [checkAuth] Starting check...");
-        setIsLoading(true);
-        let foundValidToken = false;
-        try {
-            const storedToken = localStorage.getItem('authToken');
-            const expiry = localStorage.getItem('authTokenExpiry');
+    console.log("[AuthContext] [checkAuth] Starting check...");
+    setIsLoading(true);
+    let foundValidToken = false;
+    try {
+      const storedToken = localStorage.getItem('authToken');
+      const expiry = localStorage.getItem('authTokenExpiry');
 
-            if (storedToken && expiry) {
-                const expiryDate = new Date(expiry);
-                if (expiryDate > new Date()) {
-                    console.log("[AuthContext] [checkAuth] Valid token found in storage.");
-                    setUserToken(storedToken);
-                    // Fetch user details using the valid token
-                    await fetchUserDetails(storedToken); 
-                    foundValidToken = true;
-                } else {
-                    console.log("[AuthContext] [checkAuth] Token expired.");
-                    // No need to call logout(), just don't set the token
-                    localStorage.removeItem('authToken');
-                    localStorage.removeItem('authTokenExpiry');
-                }
-            } else {
-                 console.log("[AuthContext] [checkAuth] No token found.");
-            }
-        } catch (error) {
-            console.error("[AuthContext] [checkAuth] Error during auth check:", error);
-            // Don't call logout(), just ensure token is null
-            setUserToken(null);
-        } finally {
-             // If no valid token was found after checking, ensure state reflects logged out
-             if (!foundValidToken) {
-                 setUserToken(null);
-                 setUser(null);
-             }
-             setIsLoading(false);
-             console.log("[AuthContext] [checkAuth] Finalized check, loading false.");
+      if (storedToken && expiry) {
+        const expiryDate = new Date(expiry);
+        if (expiryDate > new Date()) {
+          console.log("[AuthContext] [checkAuth] Valid token found in storage.");
+          setUserToken(storedToken);
+          // Fetch user details using the valid token
+          await fetchUserDetails();
+          foundValidToken = true;
+        } else {
+          console.log("[AuthContext] [checkAuth] Token expired.");
+          // No need to call logout(), just don't set the token
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('authTokenExpiry');
         }
+      } else {
+        console.log("[AuthContext] [checkAuth] No token found.");
+      }
+    } catch (error) {
+      console.error("[AuthContext] [checkAuth] Error during auth check:", error);
+      // Don't call logout(), just ensure token is null
+      setUserToken(null);
+    } finally {
+      // If no valid token was found after checking, ensure state reflects logged out
+      if (!foundValidToken) {
+        setUserToken(null);
+        setUser(null);
+      }
+      setIsLoading(false);
+      console.log("[AuthContext] [checkAuth] Finalized check, loading false.");
+    }
   }, [fetchUserDetails]); // Only depends on fetchUserDetails now
 
   useEffect(() => {
@@ -118,7 +118,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.setItem('authTokenExpiry', expiresAt);
     setUserToken(newToken); // Setting token triggers SessionContext fetch
     // Fetch user details immediately after login
-    await fetchUserDetails(newToken); 
+    await fetchUserDetails();
     // Session fetching is now handled by SessionContext reacting to userToken
     router.push('/');
   }, [router, fetchUserDetails]); // Depends on fetchUserDetails

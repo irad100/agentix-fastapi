@@ -28,18 +28,18 @@ export default function Home() {
   }, [isLoading, isAuthenticated, router]);
 
   const toggleSidebar = () => {
-      const group = layoutGroupRef.current;
-      if (group) {
-          if (isSidebarCollapsed) {
-              // Expand: Set layout to default sizes
-              group.setLayout([sidebarDefaultSize, 100 - sidebarDefaultSize]); 
-              setIsSidebarCollapsed(false);
-          } else {
-              // Collapse: Set layout with collapsed size for sidebar
-              group.setLayout([sidebarCollapsedSize, 100 - sidebarCollapsedSize]);
-              setIsSidebarCollapsed(true);
-          }
+    const group = layoutGroupRef.current;
+    if (group) {
+      if (isSidebarCollapsed) {
+        // Expand: Set layout to default sizes
+        group.setLayout([sidebarDefaultSize, 100 - sidebarDefaultSize]);
+        setIsSidebarCollapsed(false);
+      } else {
+        // Collapse: Set layout with collapsed size for sidebar
+        group.setLayout([sidebarCollapsedSize, 100 - sidebarCollapsedSize]);
+        setIsSidebarCollapsed(true);
       }
+    }
   };
 
   // Handle panel resize/collapse/expand events to keep state in sync
@@ -61,32 +61,32 @@ export default function Home() {
   // Render ChatInterface only if authenticated
   return (
     <main className="min-h-screen h-screen flex flex-col">
-        <ResizablePanelGroup 
-            ref={layoutGroupRef}
-            direction="horizontal" 
-            className="flex-1 border"
-            onLayout={handleLayout} // Sync state on layout change
+      <ResizablePanelGroup
+        ref={layoutGroupRef}
+        direction="horizontal"
+        className="flex-1 border"
+        onLayout={handleLayout} // Sync state on layout change
+      >
+        <ResizablePanel
+          defaultSize={sidebarDefaultSize}
+          minSize={15}
+          maxSize={40}
+          collapsible={true} // Enable collapsible prop
+          collapsedSize={sidebarCollapsedSize}
+          order={1} // Explicitly set order
+          className={isSidebarCollapsed ? "min-w-[50px] transition-all duration-300 ease-in-out" : ""} // Style collapsed panel if needed
         >
-            <ResizablePanel 
-                defaultSize={sidebarDefaultSize} 
-                minSize={15} 
-                maxSize={40}
-                collapsible={true} // Enable collapsible prop
-                collapsedSize={sidebarCollapsedSize}
-                order={1} // Explicitly set order
-                className={isSidebarCollapsed ? "min-w-[50px] transition-all duration-300 ease-in-out" : ""} // Style collapsed panel if needed
-            > 
-                <SessionSidebar isCollapsed={isSidebarCollapsed} />
-            </ResizablePanel>
-            <ResizableHandle withHandle />
-            <ResizablePanel 
-                defaultSize={75}
-                order={2} // Explicitly set order
-            >
-                 {/* Pass props to ChatInterface */}
-                <ChatInterface toggleSidebar={toggleSidebar} isSidebarCollapsed={isSidebarCollapsed} />
-            </ResizablePanel>
-        </ResizablePanelGroup>
+          <SessionSidebar isCollapsed={isSidebarCollapsed} />
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel
+          defaultSize={75}
+          order={2} // Explicitly set order
+        >
+          {/* Pass props to ChatInterface */}
+          <ChatInterface toggleSidebar={toggleSidebar} isSidebarCollapsed={isSidebarCollapsed} />
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </main>
   );
 }

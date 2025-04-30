@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import axios from 'axios';
 
 // Define the expected response structure based on openapi.json
 // UserResponse contains id, email, and token (which has access_token, expires_at)
@@ -64,34 +65,51 @@ export default function RegisterPage() {
       // Redirect to the chat page
       router.push('/');
 
-    } catch (err: any) {
+    } catch (err) {
       console.error('Registration failed:', err);
       let errorMessage = 'An unexpected error occurred during registration. Please try again.'; // Default message
 
-      if (err.response && err.response.status === 422 && err.response.data) {
+      // Define potential structures for error response data
+      type ErrorDetail = string | null | undefined;
+      interface ErrorItem {
+        field: string;
+        message: string;
+      }
+      interface ErrorResponseData {
+        detail?: ErrorDetail;
+        errors?: ErrorItem[];
+      }
+
+      // Check if it's an AxiosError with a response
+      if (axios.isAxiosError<ErrorResponseData>(err) && err.response?.data) {
+        const responseData = err.response.data;
+
+        if (err.response.status === 422) {
           // Check for the custom errors array first
-          if (Array.isArray(err.response.data.errors) && err.response.data.errors.length > 0) {
-              errorMessage = err.response.data.errors
-                  .map((e: { field: string; message: string }) => `${e.field || 'Error'}: ${e.message}`)
-                  .join('; ');
-          } else if (typeof err.response.data.detail === 'string') {
+          if (Array.isArray(responseData.errors) && responseData.errors.length > 0) {
+            errorMessage = responseData.errors
+              // Use unknown for 'e' and assert type for safety
+              .map((e: unknown) => {
+                const item = e as ErrorItem;
+                return `${item.field || 'Error'}: ${item.message}`;
+              })
+              .join('; ');
+          } else if (typeof responseData.detail === 'string') {
             // Fallback to using the detail string if errors array is not present or empty
-            errorMessage = err.response.data.detail;
+            errorMessage = responseData.detail;
           } else {
             // Fallback if neither errors nor string detail is found
-             errorMessage = 'Invalid data submitted. Please check your input.';
+            errorMessage = 'Invalid data submitted. Please check your input.';
           }
-      } else if (err.response && err.response.data && typeof err.response.data.detail === 'string'){
-          // Handle other non-422 errors that might have a string detail
-          errorMessage = err.response.data.detail;
+        } else if (typeof responseData.detail === 'string') {
+          // Handle other errors that might have a string detail (like 400)
+          errorMessage = responseData.detail;
+        }
+        // Add other specific status code checks if needed
       }
-      // Add other specific status code checks if needed (e.g., 400 for "Email already registered")
-      else if (err.response && err.response.status === 400 && typeof err.response.data.detail === 'string') {
-           errorMessage = err.response.data.detail; 
-      }
+      // Non-Axios errors or errors without response.data will use the default message
 
       setError(errorMessage);
-
     } finally {
       setIsLoading(false);
     }
@@ -152,10 +170,10 @@ export default function RegisterPage() {
         </form>
       </CardContent>
       <CardFooter className="flex justify-center text-sm">
-          <p>Already have an account?&nbsp;</p>
-          <Link href="/login" className="font-medium text-primary hover:underline">
-            Login here
-          </Link>
+        <p>Already have an account?&nbsp;</p>
+        <Link href="/login" className="font-medium text-primary hover:underline">
+          Login here
+        </Link>
       </CardFooter>
     </>
   );

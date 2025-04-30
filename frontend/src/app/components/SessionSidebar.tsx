@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useSession, SessionInfo } from '@/context/SessionContext';
 import { Button } from "@/components/ui/button";
@@ -13,15 +13,15 @@ import { PlusCircle, Trash2, Pencil, MessageSquare, LogOut } from 'lucide-react'
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
 // Define component props
@@ -34,7 +34,6 @@ const SessionSidebar: React.FC<SessionSidebarProps> = ({ isCollapsed }) => {
         sessions, // Now contains SessionInfo[]
         activeSessionInfo, // Now contains SessionInfo | null
         createNewSession,
-        fetchSessions,
         switchActiveSession, // Expects SessionInfo
         deleteSession, // Get delete function
         renameSession, // Get rename function
@@ -94,7 +93,7 @@ const SessionSidebar: React.FC<SessionSidebarProps> = ({ isCollapsed }) => {
             setSessionToDeleteId(null); // Reset after deletion
             // Dialog closes automatically via AlertDialogAction/Cancel
         } else {
-             console.error("Session ID to delete is null");
+            console.error("Session ID to delete is null");
         }
     };
 
@@ -140,7 +139,7 @@ const SessionSidebar: React.FC<SessionSidebarProps> = ({ isCollapsed }) => {
                                         <Button
                                             variant={activeSessionInfo?.session_id === session.session_id ? "secondary" : "ghost"}
                                             className={cn(
-                                                "flex-1 justify-start truncate", 
+                                                "flex-1 justify-start truncate",
                                                 isCollapsed ? "w-10 h-10 p-0 justify-center" : "w-full"
                                             )}
                                             onClick={() => handleSelectSession(session)}
@@ -160,12 +159,12 @@ const SessionSidebar: React.FC<SessionSidebarProps> = ({ isCollapsed }) => {
                                                     </DialogTrigger>
                                                     <DialogContent>
                                                         <DialogHeader>
-                                                        <DialogTitle>Rename Chat</DialogTitle>
+                                                            <DialogTitle>Rename Chat</DialogTitle>
                                                         </DialogHeader>
                                                         <div className="grid gap-4 py-4">
                                                             <div className="grid grid-cols-4 items-center gap-4">
                                                                 <Label htmlFor="name" className="text-right">Name</Label>
-                                                                <Input 
+                                                                <Input
                                                                     id="name"
                                                                     value={newName}
                                                                     onChange={(e) => setNewName(e.target.value)}
@@ -184,8 +183,8 @@ const SessionSidebar: React.FC<SessionSidebarProps> = ({ isCollapsed }) => {
                                                 </Dialog>
                                                 <AlertDialog open={isDeleteDialogOpen && sessionToDeleteId === session.session_id} onOpenChange={setIsDeleteDialogOpen}>
                                                     <AlertDialogTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive" onClick={(e) => handleDeleteClick(e, session.session_id)} title="Delete Chat"> 
-                                                            <Trash2 className="h-4 w-4" /> 
+                                                        <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive" onClick={(e) => handleDeleteClick(e, session.session_id)} title="Delete Chat">
+                                                            <Trash2 className="h-4 w-4" />
                                                         </Button>
                                                     </AlertDialogTrigger>
                                                     <AlertDialogContent>
@@ -193,7 +192,7 @@ const SessionSidebar: React.FC<SessionSidebarProps> = ({ isCollapsed }) => {
                                                             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                                             <AlertDialogDescription>
                                                                 This action cannot be undone. This will permanently delete the chat
-                                                                session "{session.name || 'Untitled Chat'}" and all its messages.
+                                                                session &quot;{session.name || 'Untitled Chat'}&quot; and all its messages.
                                                             </AlertDialogDescription>
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter>
@@ -216,41 +215,41 @@ const SessionSidebar: React.FC<SessionSidebarProps> = ({ isCollapsed }) => {
                         <p className="text-sm text-muted-foreground p-2 text-center">No chats yet.</p>
                     )}
                     {(isSessionLoading || isAuthLoading) && (
-                         <p className="text-sm text-muted-foreground p-2 text-center">Loading...</p>
+                        <p className="text-sm text-muted-foreground p-2 text-center">Loading...</p>
                     )}
                 </div>
             </ScrollArea>
             {/* Footer with User Info & Logout */}
             <div className={cn("p-2 border-t", isCollapsed ? "px-2" : "px-4 py-3")}>
-                 <DropdownMenu>
+                <DropdownMenu>
                     <TooltipProvider delayDuration={0}>
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" className={cn("w-full justify-start text-sm font-medium", isCollapsed ? "justify-center h-10 w-10 p-0" : "justify-start")}>
-                                         {!isCollapsed && (
+                                        {!isCollapsed && (
                                             <span className="truncate">{displayEmail}</span>
                                         )}
-                                        {/* Display initials directly when collapsed */} 
+                                        {/* Display initials directly when collapsed */}
                                         {isCollapsed && (
                                             <span className="font-medium">{userInitials}</span>
                                         )}
                                     </Button>
                                 </DropdownMenuTrigger>
                             </TooltipTrigger>
-                             {isCollapsed && <TooltipContent side="right"><p>{displayEmail}</p></TooltipContent>}
+                            {isCollapsed && <TooltipContent side="right"><p>{displayEmail}</p></TooltipContent>}
                         </Tooltip>
                     </TooltipProvider>
-                    <DropdownMenuContent 
+                    <DropdownMenuContent
                         side="top"
-                        align={isCollapsed ? "center" : "start"} 
+                        align={isCollapsed ? "center" : "start"}
                         alignOffset={4}
                     >
                         <DropdownMenuLabel>My Account</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer">
-                           <LogOut className="mr-2 h-4 w-4" /> 
-                           Log out
+                            <LogOut className="mr-2 h-4 w-4" />
+                            Log out
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
