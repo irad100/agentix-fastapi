@@ -227,6 +227,21 @@ async def login(
         raise HTTPException(status_code=422, detail=str(ve))
 
 
+@router.get("/me", response_model=UserResponse)
+async def read_users_me(
+    current_user: User = Depends(get_current_user),
+):
+    """Get the details of the currently authenticated user.
+
+    Args:
+        current_user: The authenticated user
+
+    Returns:
+        UserResponse: The user's details (without token)
+    """
+    return UserResponse(id=current_user.id, email=current_user.email)
+
+
 @router.post("/session", response_model=SessionResponse)
 async def create_session(user: User = Depends(get_current_user)):
     """Create a new chat session for the authenticated user.
@@ -259,6 +274,34 @@ async def create_session(user: User = Depends(get_current_user)):
     except ValueError as ve:
         logger.error("session_creation_validation_failed", error=str(ve), user_id=user.id, exc_info=True)
         raise HTTPException(status_code=422, detail=str(ve))
+
+
+@router.delete("/session/{session_id}")
+async def delete_session(session_id: str, current_session: Session = Depends(get_current_session)):
+    """Delete a session.
+
+    Args:
+        session_id: The ID of the session to delete
+        current_session: The current session from auth
+
+    Returns:
+        dict: A message indicating the session was deleted successfully
+    """
+    try:
+        # Sanitize inputs
+        sanitized_session_id = sanitize_string(session_id)
+        sanitized_current_session = sanitize_string(current_session.id)
+
+        # Verify the session ID matches the authenticated session
+        if sanitized_session_id != sanitized_current_session:
+            raise HTTPException(status_code=403, detail="Cannot delete other sessions")
+
+        # Delete the session from the database
+        await db_service.delete_session(sanitized_session_id)
+        return {"message": "Session deleted successfully"}
+    except Exception as e:
+        logger.error("delete_session_failed", session_id=session_id, error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.patch("/session/{session_id}/name", response_model=SessionResponse)

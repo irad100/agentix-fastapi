@@ -2,6 +2,7 @@
 
 import re
 from datetime import datetime
+from typing import Optional
 
 from pydantic import (
     BaseModel,
@@ -97,7 +98,7 @@ class UserResponse(BaseModel):
 
     id: int = Field(..., description="User's ID")
     email: str = Field(..., description="User's email address")
-    token: Token = Field(..., description="Authentication token")
+    token: Optional[Token] = Field(default=None, description="Authentication token (optional)")
 
 
 class SessionResponse(BaseModel):

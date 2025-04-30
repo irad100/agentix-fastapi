@@ -147,6 +147,26 @@ class DatabaseService:
             logger.info("session_created", session_id=session_id, user_id=user_id, name=name)
             return chat_session
 
+    async def delete_session(self, session_id: str) -> bool:
+        """Delete a session by ID.
+
+        Args:
+            session_id: The ID of the session to delete
+
+        Returns:
+            bool: True if deletion was successful, False otherwise
+        """
+        with Session(self.engine) as session:
+            session_to_delete = session.get(ChatSession, session_id)
+            if session_to_delete:
+                session.delete(session_to_delete)
+                session.commit()
+                logger.info("session_deleted", session_id=session_id)
+                return True
+            else:
+                logger.warning("session_not_found_for_delete", session_id=session_id)
+                return False
+
     async def get_session(self, session_id: str) -> Optional[ChatSession]:
         """Get a session by ID.
 
