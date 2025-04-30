@@ -3,6 +3,7 @@
 import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
 import api from '@/lib/api';
 import { useSession } from './SessionContext'; // Import useSession to access session info
+import axios from 'axios'; // Import axios for type checking
 
 // Define the Message structure (matching backend schema)
 export interface Message {
@@ -36,7 +37,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setMessages([]); // Clear messages if no active session
       return;
     }
-    const token = activeSessionInfo.token.access_token;
     const sessionId = activeSessionInfo.session_id;
     console.log(`[ChatContext] Fetching messages for session: ${sessionId}`);
     setIsLoadingMessages(true);
@@ -45,15 +45,18 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const response = await api.get<ChatResponse>(`/api/v1/chatbot/messages`); // Removed manual header
       setMessages(response.data.messages || []);
       console.log(`[ChatContext] Fetched ${response.data.messages?.length || 0} messages for session ${sessionId}.`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`[ChatContext] Failed to fetch messages for session ${sessionId}:`, error);
-      // Handle specific errors, e.g., 404 might mean no history, not necessarily an error display
-       if (error.response?.status === 404) {
-           setMessages([]); // Set empty array if chat history doesn't exist yet
-           console.log(`[ChatContext] No message history found for session ${sessionId}.`);
-       } else {
-          // TODO: Maybe show a toast notification for other errors
-       }
+
+      // Check if it's an AxiosError with a response
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        setMessages([]); // Set empty array if chat history doesn't exist yet
+        console.log(`[ChatContext] No message history found for session ${sessionId}.`);
+      } else {
+        // Handle other errors (could be Axios or other types)
+        console.error("[ChatContext] An unexpected error occurred fetching messages:", error);
+        // Optionally: Show a toast notification for other errors
+      }
     } finally {
       setIsLoadingMessages(false);
     }
@@ -64,7 +67,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.error("[ChatContext] Cannot clear chat history, no active session or token found.");
       return;
     }
-    const token = activeSessionInfo.token.access_token;
     const sessionId = activeSessionInfo.session_id;
 
     console.log(`[ChatContext] Clearing chat history for session: ${sessionId}`);

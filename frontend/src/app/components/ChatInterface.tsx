@@ -2,7 +2,6 @@
 
 import React, { useState, FormEvent, useRef, useEffect } from 'react';
 import api from '@/lib/api';
-import { useAuth } from '@/context/AuthContext';
 import { useChat } from '@/context/ChatContext';
 import { useSession } from '@/context/SessionContext';
 import { Button } from "@/components/ui/button"
@@ -14,8 +13,8 @@ import { PanelLeftClose, PanelRightClose, Eraser } from 'lucide-react'; // Icons
 // Define the structure of the JSON data expected within each SSE message
 // Based on app/schemas/chat.py StreamResponse
 interface StreamChunk {
-    content: string;
-    done: boolean;
+  content: string;
+  done: boolean;
 }
 
 // Define the message structure based on openapi.json
@@ -24,23 +23,18 @@ interface Message {
   content: string;
 }
 
-// Define ChatResponse type based on openapi.json
-interface ChatResponse {
-    messages: Message[];
-}
 
 // Define props
 interface ChatInterfaceProps {
-    toggleSidebar: () => void;
-    isSidebarCollapsed: boolean;
+  toggleSidebar: () => void;
+  isSidebarCollapsed: boolean;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ toggleSidebar, isSidebarCollapsed }) => {
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const { logout } = useAuth();
   const { activeSessionInfo } = useSession();
-  const { messages, setMessages, clearChatHistory, fetchMessages, isLoadingMessages } = useChat();
+  const { messages, setMessages, clearChatHistory, isLoadingMessages } = useChat();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -81,7 +75,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ toggleSidebar, isSidebarC
     abortControllerRef.current = new AbortController();
 
     const userMessage: Message = { role: 'user', content: input };
-    const assistantPlaceholder: Message = { role: 'assistant', content: '' }; 
+    const assistantPlaceholder: Message = { role: 'assistant', content: '' };
     const currentMessages = [...messages, userMessage, assistantPlaceholder];
     setMessages(currentMessages);
     setInput('');
@@ -94,12 +88,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ toggleSidebar, isSidebarC
       // Get token directly from context state
       const token = activeSessionInfo?.token?.access_token;
       if (!token) {
-          // This should ideally not happen due to the guard at the start of handleSubmit
-          throw new Error("Session token is missing, cannot send message.");
+        // This should ideally not happen due to the guard at the start of handleSubmit
+        throw new Error("Session token is missing, cannot send message.");
       }
 
       const streamUrl = `${api.defaults.baseURL || ''}/api/v1/chatbot/chat/stream`;
-      
+
       const response = await fetch(streamUrl, {
         method: 'POST',
         headers: {
@@ -107,7 +101,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ toggleSidebar, isSidebarC
           'Accept': 'text/event-stream',
           'Authorization': `Bearer ${token}`, // Set header directly
         },
-        body: JSON.stringify({ messages: [...messages, userMessage] }), 
+        body: JSON.stringify({ messages: [...messages, userMessage] }),
         signal: abortControllerRef.current?.signal,
       });
 
@@ -121,7 +115,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ toggleSidebar, isSidebarC
       let buffer = '';
 
       // Read the stream
-      // eslint-disable-next-line no-constant-condition
+
       while (true) {
         const { value, done } = await reader.read();
 
@@ -141,21 +135,21 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ toggleSidebar, isSidebarC
               const chunk: StreamChunk = JSON.parse(jsonStr);
 
               if (chunk.done) {
-                  console.log('Stream marked as done by server.');
-                  // Final update might be empty if server sends done signal separately
-                  // No need to break here, the reader finishing will do it.
+                console.log('Stream marked as done by server.');
+                // Final update might be empty if server sends done signal separately
+                // No need to break here, the reader finishing will do it.
               } else {
-                  // Update the content of the last message (assistant's placeholder)
-                  setMessages((prevMessages) => {
-                    const lastMessage = prevMessages[prevMessages.length - 1];
-                    if (lastMessage && lastMessage.role === 'assistant') {
-                      return [
-                        ...prevMessages.slice(0, -1),
-                        { ...lastMessage, content: lastMessage.content + chunk.content },
-                      ];
-                    }
-                    return prevMessages; // Should not happen if placeholder was added
-                  });
+                // Update the content of the last message (assistant's placeholder)
+                setMessages((prevMessages) => {
+                  const lastMessage = prevMessages[prevMessages.length - 1];
+                  if (lastMessage && lastMessage.role === 'assistant') {
+                    return [
+                      ...prevMessages.slice(0, -1),
+                      { ...lastMessage, content: lastMessage.content + chunk.content },
+                    ];
+                  }
+                  return prevMessages; // Should not happen if placeholder was added
+                });
               }
             } catch (e) {
               console.error('Failed to parse stream chunk:', e, "Chunk:", line);
@@ -163,26 +157,45 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ toggleSidebar, isSidebarC
           }
         }
         // Scroll continuously as content arrives
-        scrollToBottom(); 
+        scrollToBottom();
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error during chat stream:', error);
-      if (error.name !== 'AbortError') {
+
+      let errorMessage = "An unexpected error occurred."; // Default message
+
+      // Check if it's an Error instance to safely access properties
+      if (error instanceof Error) {
+        if (error.name !== 'AbortError') {
+          errorMessage = error.message;
           setMessages((prevMessages) => {
             const lastMessage = prevMessages[prevMessages.length - 1];
             if (lastMessage && lastMessage.role === 'assistant' && lastMessage.content === '') {
+              // Update placeholder if it exists
               return [
                 ...prevMessages.slice(0, -1),
-                { role: 'assistant', content: `Sorry, an error occurred: ${error.message}` },
+                { role: 'assistant', content: `Sorry, an error occurred: ${errorMessage}` },
               ];
-            } 
+            }
+            // Otherwise, add a new error message
             return [
               ...prevMessages,
-              { role: 'assistant', content: `Sorry, an error occurred: ${error.message}` },
+              { role: 'assistant', content: `Sorry, an error occurred: ${errorMessage}` },
             ];
           });
+        } else {
+          console.log("Fetch aborted by user."); // AbortError is expected, maybe just log it
+        }
+      } else {
+        // Handle cases where the caught object is not an Error instance
+        console.error("Caught a non-Error object:", error);
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { role: 'assistant', content: `Sorry, an unexpected error occurred.` }, // Use generic message
+        ]);
       }
+
     } finally {
       setIsSending(false);
       abortControllerRef.current = null;
@@ -191,14 +204,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ toggleSidebar, isSidebarC
 
   // Handler for clearing chat
   const handleClearChat = async () => {
-      console.log("Attempting to clear chat history...");
-      try {
-          await clearChatHistory();
-      } catch (error) {
-          console.error("Clear chat history failed:", error);
-          // Optionally show an error message to the user (e.g., using a Toast component)
-          alert("Failed to clear chat history. Please try again."); // Simple alert for now
-      }
+    console.log("Attempting to clear chat history...");
+    try {
+      await clearChatHistory();
+    } catch (error) {
+      console.error("Clear chat history failed:", error);
+      // Optionally show an error message to the user (e.g., using a Toast component)
+      alert("Failed to clear chat history. Please try again."); // Simple alert for now
+    }
   };
 
   return (
@@ -207,68 +220,68 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ toggleSidebar, isSidebarC
       <div className="p-4 border-b flex justify-between items-center bg-card text-card-foreground">
         {/* Toggle Button */}
         <Button variant="ghost" size="icon" onClick={toggleSidebar} title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}>
-            {isSidebarCollapsed ? <PanelRightClose className="h-5 w-5"/> : <PanelLeftClose className="h-5 w-5"/>}
+          {isSidebarCollapsed ? <PanelRightClose className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
         </Button>
         {/* Title */}
         <h1 className="text-lg font-semibold mx-auto text-center truncate px-2" title={activeSessionInfo?.name || 'Chat'}>
-             {activeSessionInfo?.name || 'Chat'}
+          {activeSessionInfo?.name || 'Chat'}
         </h1>
-        {/* Action Buttons Container (Remove Logout Button) */} 
-        <div className="flex items-center space-x-2 min-w-[80px] justify-end"> {/* Added min-width and justify-end */} 
-             {/* Clear History Button & Dialog */}
-             <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon" title="Clear Chat History" disabled={!activeSessionInfo || isLoadingMessages || messages.length === 0}>
-                         <Eraser className="h-5 w-5" />
-                    </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This action cannot be undone. This will permanently clear the message
-                        history for this chat session.
-                    </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleClearChat} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                        Clear History
-                    </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-             {/* Placeholder to maintain spacing, or add other icons here later */}
-             <div className="w-[36px]"></div> {/* Adjust width as needed */} 
+        {/* Action Buttons Container (Remove Logout Button) */}
+        <div className="flex items-center space-x-2 min-w-[80px] justify-end"> {/* Added min-width and justify-end */}
+          {/* Clear History Button & Dialog */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="icon" title="Clear Chat History" disabled={!activeSessionInfo || isLoadingMessages || messages.length === 0}>
+                <Eraser className="h-5 w-5" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently clear the message
+                  history for this chat session.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleClearChat} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Clear History
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          {/* Placeholder to maintain spacing, or add other icons here later */}
+          <div className="w-[36px]"></div> {/* Adjust width as needed */}
         </div>
       </div>
 
-      {/* Message Area */} 
+      {/* Message Area */}
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
-          <div className="space-y-4">
-            {/* Display loading indicator if messages are loading */} 
-            {isLoadingMessages && (
-                 <div className="p-4 text-center text-muted-foreground">
-                     Loading messages...
-                 </div>
-            )}
-            {/* Display messages from context */} 
-            {!isLoadingMessages && messages.map((msg, index) => (
+        <div className="space-y-4">
+          {/* Display loading indicator if messages are loading */}
+          {isLoadingMessages && (
+            <div className="p-4 text-center text-muted-foreground">
+              Loading messages...
+            </div>
+          )}
+          {/* Display messages from context */}
+          {!isLoadingMessages && messages.map((msg, index) => (
+            <div
+              key={index}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
               <div
-                key={index}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow whitespace-pre-wrap ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
               >
-                <div
-                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow whitespace-pre-wrap ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
-                >
-                  {msg.content}
-                </div>
+                {msg.content}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
+        </div>
       </ScrollArea>
 
-      {/* Input Area */} 
+      {/* Input Area */}
       <div className="p-4 border-t bg-card">
         <form onSubmit={handleSubmit} className="flex items-center space-x-2">
           <Input
@@ -281,7 +294,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ toggleSidebar, isSidebarC
             autoComplete="off"
           />
           <Button type="submit" disabled={isSending || !input.trim()}>
-            {/* Change button text slightly if needed */} 
+            {/* Change button text slightly if needed */}
             {isSending ? '...' : 'Send'}
           </Button>
         </form>
