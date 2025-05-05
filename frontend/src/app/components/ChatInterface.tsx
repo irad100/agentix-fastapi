@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { PanelLeftClose, PanelRightClose, Eraser } from 'lucide-react'; // Icons for toggle and Eraser
+import ReactMarkdown from 'react-markdown';
 
 // Define the structure of the JSON data expected within each SSE message
 // Based on app/schemas/chat.py StreamResponse
@@ -257,7 +258,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ toggleSidebar, isSidebarC
       </div>
 
       {/* Message Area */}
-      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+      <ScrollArea className="flex-1 p-4 min-h-0" ref={scrollAreaRef}>
         <div className="space-y-4">
           {/* Display loading indicator if messages are loading */}
           {isLoadingMessages && (
@@ -274,7 +275,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ toggleSidebar, isSidebarC
               <div
                 className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow whitespace-pre-wrap ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
               >
-                {msg.content}
+                <ReactMarkdown>{msg.content}</ReactMarkdown>
               </div>
             </div>
           ))}
